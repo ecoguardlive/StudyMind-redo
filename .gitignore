@@ -1,0 +1,12 @@
+# Python artifacts
+__pycache__/
+*.pyc
+gen_icons.py
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

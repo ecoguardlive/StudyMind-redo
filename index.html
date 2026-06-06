@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyMind AI – MECH 106</title>
+
+<!-- PWA meta tags -->
+<meta name="theme-color" content="#4f8ef7">
+<meta name="description" content="AI-powered study assistant for MECH 106 Basic Mechanics at UENR, Sunyani">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StudyMind">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.json">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="notif-wrap"></div>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🧠</div>
+    <div class="logo-text"><h1>StudyMind AI</h1><p>MECH 106 · Basic Mechanics</p></div>
+  </div>
+  <nav class="sidebar-nav" id="nav">
+    <button class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span> Dashboard</button>
+    <button class="nav-item" data-page="library"><span class="nav-icon">📚</span> Library</button>
+    <button class="nav-item" data-page="quiz"><span class="nav-icon">🧠</span> Quizzes</button>
+    <button class="nav-item" data-page="flashcards"><span class="nav-icon">🃏</span> Flashcards</button>
+    <button class="nav-item" data-page="summary"><span class="nav-icon">📝</span> Summaries</button>
+    <button class="nav-item" data-page="progress"><span class="nav-icon">📈</span> Progress</button>
+    <button class="nav-item" data-page="ai-tutor"><span class="nav-icon">💬</span> AI Tutor</button>
+    <button class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span> Settings</button>
+  </nav>
+  <div class="sync-badge" id="sync-badge">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span id="sync-label">Knowledge base ready</span>
+  </div>
+  <div class="sidebar-user">
+    <div class="user-row">
+      <div class="user-avatar" id="user-avatar">S</div>
+      <div class="user-info"><p id="profile-name">Student</p><span>Study Mode</span></div>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-dashboard">
+  <div class="greeting-row">
+    <div>
+      <h2 id="greeting" style="font-family:var(--font-serif);font-size:26px">Good morning</h2>
+      <p style="color:var(--fg2);font-size:13px;margin-top:3px">PABLO MECH 106 · Basic Mechanics — UENR, Sunyani. Upload PDFs to expand your knowledge base.</p>
+    </div>
+    <div class="streak-pill">
+      <div class="streak-icon">🏆</div>
+      <div><div class="streak-label">Study Streak</div><div class="streak-value" id="streak-val">0 Days</div></div>
+    </div>
+  </div>
+  <div id="api-key-banner" class="api-config-banner" style="display:none">
+    <span>⚠️</span>
+    <div style="flex:1">
+      <strong>Add your API key</strong> to enable AI generation. Paste a Claude, Gemini, or OpenAI key below.
+      <div style="display:flex;gap:8px;margin-top:7px">
+        <input id="apiKeyInput" type="password" placeholder="sk-ant-... / AIza... / sk..." style="flex:1;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:6px;padding:6px 10px;color:var(--fg);font-size:12px">
+        <button class="btn btn-sm" style="background:var(--orange);color:#fff" onclick="saveApiKey()">Save</button>
+      </div>
+    </div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Knowledge Base</div><div class="stat-value" id="s-docs">1</div><div class="stat-sub">Documents indexed</div></div>
+    <div class="stat-card"><div class="stat-label">Questions Answered</div><div class="stat-value" id="s-quiz">0</div><div class="stat-sub">This session</div></div>
+    <div class="stat-card"><div class="stat-label">AI Chats</div><div class="stat-value" id="s-chats">0</div><div class="stat-sub">Tutor messages</div></div>
+  </div>
+  <div style="margin-bottom:10px;font-size:13px;font-weight:700;color:var(--fg2)">Quick Actions</div>
+  <div class="actions-grid">
+    <div class="action-btn" onclick="nav('library')"><div class="action-icon a">📤</div><span class="action-label">Upload PDF</span></div>
+    <div class="action-btn" onclick="doGenQuiz()"><div class="action-icon b">🧠</div><span class="action-label">Generate Quiz</span></div>
+    <div class="action-btn" onclick="doGenFC()"><div class="action-icon a">🃏</div><span class="action-label">Make Flashcards</span></div>
+    <div class="action-btn" onclick="nav('ai-tutor')"><div class="action-icon b">💬</div><span class="action-label">Ask AI Tutor</span></div>
+  </div>
+  <div class="tip-banner">
+    <span style="font-size:18px">💡</span>
+    <span><strong>Powered by AI</strong> — supports Claude, Gemini, and OpenAI keys. Upload additional PDFs anytime; the knowledge base updates instantly. Install as an app for offline access.</span>
+  </div>
+</div>
+
+<!-- LIBRARY -->
+<div class="page" id="page-library">
+  <div class="page-header"><h2>Document Library</h2><p>PABLO MECH 106 is pre-loaded. Upload PDFs to expand the AI knowledge base — all features update instantly.</p></div>
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" id="fileInput" accept=".pdf" multiple style="display:none">
+    <div class="upload-icon-wrap">📤</div>
+    <h3>Drop PDF files here</h3>
+    <p>Lecture notes, past papers, reference books — all indexed automatically.</p>
+    <button class="btn btn-primary" id="uploadBtn">Choose Files</button>
+  </div>
+  <div class="lib-toolbar">
+    <span class="lib-toolbar-left" id="lib-kb-info">Knowledge base: 1 document</span>
+    <button class="btn btn-outline btn-sm" onclick="clearUserDocs()">🗑 Clear Uploads</button>
+  </div>
+  <div class="docs-grid" id="docs-grid"></div>
+</div>
+
+<!-- QUIZ -->
+<div class="page" id="page-quiz">
+  <div class="quiz-wrap">
+    <div>
+      <div class="quiz-top"><h2 style="font-family:var(--font-serif);font-size:22px">Quiz</h2><span class="quiz-counter" id="quiz-counter">Q 1 of 5</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="quiz-progress" style="width:20%"></div></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap" id="quiz-doc-selector">
+      <span style="font-size:11px;color:var(--fg3);align-self:center">Source:</span>
+    </div>
+    <div class="quiz-status" id="quiz-status"></div>
+    <div class="question-card">
+      <div class="q-badge" id="q-badge">Question 1</div>
+      <div class="question-text" id="q-text">Loading…</div>
+      <div class="options" id="q-options"></div>
+    </div>
+    <div class="quiz-actions">
+      <button class="btn btn-outline btn-sm" onclick="quizSkip()">⏭ Skip</button>
+      <button class="btn btn-primary" id="quiz-next-btn" onclick="quizNext()" disabled>Next →</button>
+    </div>
+    <div class="quiz-dots" id="quiz-dots"></div>
+  </div>
+</div>
+
+<!-- FLASHCARDS -->
+<div class="page" id="page-flashcards">
+  <div class="fc-wrap">
+    <div class="fc-header">
+      <div><h2 style="font-family:var(--font-serif);font-size:22px">Flashcards</h2><p class="fc-subtitle" id="fc-subtitle">MECH 106 · Basic Mechanics</p></div>
+      <span class="fc-counter" id="fc-counter">1 / 5</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap" id="fc-doc-selector">
+      <span style="font-size:11px;color:var(--fg3);align-self:center">Source:</span>
+    </div>
+    <div class="fc-scene" id="fc-scene">
+      <div class="fc-card-inner" id="fc-inner">
+        <div class="fc-face front">
+          <span class="fc-badge q">Question</span>
+          <p class="fc-text-q" id="fc-q">Tap to flip and see the answer.</p>
+          <p class="fc-hint">🔄 Tap to flip</p>
+        </div>
+        <div class="fc-face back">
+          <span class="fc-badge a">Answer</span>
+          <p class="fc-text-a" id="fc-a">Answer appears here.</p>
+          <p class="fc-hint">🔄 Tap to flip back</p>
+        </div>
+      </div>
+    </div>
+    <div class="fc-source-tag" id="fc-source-tag">Source: PABLO Basic Mechanics</div>
+    <div class="fc-btns" id="fc-btns" style="display:none">
+      <button class="btn btn-red" onclick="fcDone('learning')">✗ Still Learning</button>
+      <button class="btn btn-green" onclick="fcDone('know')">✓ I Know This</button>
+    </div>
+    <div class="progress-section">
+      <div class="progress-meta"><span>Deck Progress</span><span id="fc-pct">0%</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="fc-bar" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div class="page" id="page-summary">
+  <div class="page-header"><h2>Summaries &amp; Study Guides</h2><p>Generate comprehensive summaries, study guides, and practice questions from your documents.</p></div>
+  <div class="summary-toolbar">
+    <button class="btn btn-primary" onclick="genSummary('summary')">📄 Generate Summary</button>
+    <button class="btn btn-accent" onclick="genSummary('guide')">📋 Study Guide</button>
+    <button class="btn btn-outline" onclick="genSummary('questions')">❓ Practice Questions</button>
+    <button class="btn btn-outline" onclick="genSummary('keyterms')">🔑 Key Terms</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+    <span style="font-size:11px;color:var(--fg3)">Source doc:</span>
+    <div id="summary-doc-selector" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+  </div>
+  <div id="summary-output">
+    <div style="padding:36px;text-align:center;color:var(--fg3);font-size:13px">
+      Select a type above to generate content from your knowledge base.
+    </div>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="page" id="page-progress">
+  <div class="page-header"><h2>Progress</h2><p>Real-time learning analytics for MECH 106.</p></div>
+  <div class="progress-stats-row">
+    <div class="pstat"><div class="pstat-val" id="p-total-q">0</div><div class="pstat-lbl">Questions Answered</div></div>
+    <div class="pstat"><div class="pstat-val" id="p-correct">0</div><div class="pstat-lbl">Correct Answers</div></div>
+    <div class="pstat"><div class="pstat-val" id="p-accuracy">—</div><div class="pstat-lbl">Accuracy</div></div>
+    <div class="pstat"><div class="pstat-val" id="p-cards">0</div><div class="pstat-lbl">Cards Mastered</div></div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-title">Quiz Score History</div><canvas id="scoreChart" height="200"></canvas></div>
+    <div class="chart-card"><div class="chart-title">Topic Coverage</div><canvas id="topicChart" height="200"></canvas></div>
+  </div>
+  <div class="heatmap-card">
+    <div class="chart-title">Study Activity (last 20 weeks)</div>
+    <div class="heatmap-grid" id="heatmap"></div>
+    <div class="heatmap-legend"><span>Less</span><div style="display:flex;gap:3px"><div class="heatmap-cell" style="width:12px;height:12px"></div><div class="heatmap-cell i1" style="width:12px;height:12px"></div><div class="heatmap-cell i2" style="width:12px;height:12px"></div><div class="heatmap-cell i3" style="width:12px;height:12px"></div><div class="heatmap-cell i4" style="width:12px;height:12px"></div></div><span>More</span></div>
+  </div>
+  <div class="card" style="padding:20px;margin-top:16px">
+    <div class="chart-title">Recent Activity</div>
+    <div id="activity-list"><p style="color:var(--fg3);font-size:12px">No activity yet — take a quiz or review flashcards.</p></div>
+  </div>
+</div>
+
+<!-- AI TUTOR -->
+<div class="page" id="page-ai-tutor">
+  <div class="page-header"><h2>AI Tutor</h2><p>Ask anything about MECH 106. The AI uses your full knowledge base.</p></div>
+  <div class="tutor-layout">
+    <div class="doc-panel">
+      <div class="doc-panel-title">Active Reference</div>
+      <div class="active-doc-display">
+        <div class="active-doc-icon">📄</div>
+        <div>
+          <div class="active-doc-name" id="ref-name">PABLO Basic Mechanics</div>
+          <div class="active-doc-pages" id="ref-meta">183 pages · Pre-loaded</div>
+        </div>
+      </div>
+      <div>
+        <div class="topics-label" style="margin-bottom:7px">Quick questions</div>
+        <div class="topic-chips">
+          <span class="topic-chip" onclick="prefill(this)">Explain Newton's laws</span>
+          <span class="topic-chip" onclick="prefill(this)">What is a free body diagram?</span>
+          <span class="topic-chip" onclick="prefill(this)">Explain static equilibrium</span>
+          <span class="topic-chip" onclick="prefill(this)">What is the parallelogram law?</span>
+          <span class="topic-chip" onclick="prefill(this)">Difference between statics and dynamics</span>
+          <span class="topic-chip" onclick="prefill(this)">Explain moment of a force</span>
+        </div>
+      </div>
+      <div class="web-badge">🌐 Web search: <strong id="web-status">OFF</strong><br><span style="font-size:10px">Toggle in Settings</span></div>
+      <div class="kb-info">
+        <div style="font-weight:600;color:var(--fg2);margin-bottom:4px">📚 Knowledge Base</div>
+        <div class="kb-doc-list" id="kb-doc-list"></div>
+      </div>
+    </div>
+    <div class="chat-panel">
+      <div class="chat-header">AI Tutor Chat <span class="chat-badge">AI</span></div>
+      <div class="chat-messages" id="chat-msgs">
+        <div class="msg ai">
+          <div class="msg-meta">AI Tutor</div>
+          <div class="msg-bubble">Hello! I'm your AI Tutor for MECH 106 Basic Mechanics at UENR, Sunyani. I have your full course content — upload more PDFs anytime and I'll use them too. Ask me anything about Newton's laws, forces, equilibrium, statics, dynamics, friction, or any other topic. What would you like to study?</div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input class="chat-input" id="chat-in" placeholder="Ask about your course material…">
+        <button class="btn btn-primary" id="send-btn" onclick="sendMsg()">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="page-header"><h2>Settings</h2><p>Configure the AI model, API key, and your profile.</p></div>
+  <div class="settings-section">
+    <div class="settings-header">🤖 AI Provider — auto-detected from key</div>
+    <div class="settings-body">
+      <div class="form-group" style="margin-top:12px">
+        <label class="form-label">API Key <span style="color:var(--fg3);font-weight:400">(Claude / Gemini / OpenAI — auto-detected)</span></label>
+        <div style="display:flex;gap:8px">
+          <input class="form-input" id="apiKeySettings" type="password" placeholder="sk-ant-... or AIza... or sk-proj-...">
+          <button class="btn btn-primary" onclick="saveApiKey()">Save</button>
+        </div>
+        <!-- FIX: shows masked confirmation after key is saved -->
+        <p id="apiKeyHint" style="font-size:11px;color:var(--fg3);margin-top:5px">Paste any key: <b>sk-ant-...</b> (Claude) &middot; <b>AIza...</b> (Gemini) &middot; <b>sk-proj-...</b> (OpenAI). Provider detected automatically.</p>
+      </div>
+    </div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-header">🧠 AI Behaviour</div>
+    <div class="settings-body">
+      <div class="toggle-row">
+        <div class="toggle-info"><p>🌐 Internet search</p><span>AI searches the web for supplementary answers.</span></div>
+        <button class="toggle" id="webTgl" onclick="toggleSetting('web')"></button>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info"><p>📄 Prefer document reference</p><span>Answer from course material first before general knowledge.</span></div>
+        <button class="toggle on" id="docTgl" onclick="toggleSetting('doc')"></button>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info"><p>📚 Use all documents</p><span>Include all uploaded docs in every AI generation task.</span></div>
+        <button class="toggle on" id="allDocsTgl" onclick="toggleSetting('allDocs')"></button>
+      </div>
+    </div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-header">👤 Profile</div>
+    <div class="settings-body" style="padding-top:14px">
+      <div class="form-group"><label class="form-label">Your Name</label><input class="form-input" id="nameIn" placeholder="Enter your name"></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="emailIn" type="email" placeholder="email@example.com"></div>
+      <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+    </div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-header">📱 Install App</div>
+    <div class="settings-body" style="padding-top:14px">
+      <p style="font-size:13px;color:var(--fg2);margin-bottom:12px">Install StudyMind as a standalone app on your device for offline access and a native experience.</p>
+      <button class="btn btn-primary" id="installBtn" style="display:none" onclick="installPWA()">⬇️ Install StudyMind App</button>
+      <p id="installNote" style="font-size:12px;color:var(--fg3)">To install: in your browser menu, tap <strong>Add to Home Screen</strong> or <strong>Install App</strong>.</p>
+    </div>
+  </div>
+</div>
+
+</main>
+
+  <script src="js/app.js"></script>
+<script>
+    // PWA install prompt
+    let _deferredPrompt;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      _deferredPrompt = e;
+      document.getElementById('installBtn').style.display = 'inline-flex';
+      document.getElementById('installNote').style.display = 'none';
+    });
+    function installPWA() {
+      if (!_deferredPrompt) return;
+      _deferredPrompt.prompt();
+      _deferredPrompt.userChoice.then(() => { _deferredPrompt = null; });
+    }
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
